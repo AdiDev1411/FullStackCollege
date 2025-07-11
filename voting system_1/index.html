@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programming Language Voting System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="box">
+        <h1>Vote Your Favorite Language</h1>
+        <div class="inside">
+            <button onclick="voteJavaScript()">Vote JavaScript</button>
+            <button onclick="votePython()">Vote Python</button>
+            <button onclick="voteJava()">Vote Java</button>
+        </div>
+        <div class="result">
+            <h2>Results</h2>
+            <div class="result-item">
+                <span class="language">JavaScript</span>
+                <span class="votes" id="javascriptcount">0 votes</span>
+            </div>
+            <div class="result-item">
+                <span class="language">Python</span>
+                <span class="votes" id="pythoncount">0 votes</span>
+            </div>
+            <div class="result-item">
+                <span class="language">Java</span>
+                <span class="votes" id="javacount">0 votes</span>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
