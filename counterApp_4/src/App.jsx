@@ -95,4 +95,12 @@ const App = () => {
   );
 };
 
+<<<<<<< HEAD
 export default App;
+=======
+<<<<<<< HEAD
+export default App;
+=======
+export default App;
+>>>>>>> 35fa9b3 (upated files)
+>>>>>>> 5fea5ef (upated files)
