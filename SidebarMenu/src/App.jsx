@@ -9,7 +9,7 @@ const menuItems = [
 
 const App = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [active, setActive] = useState('Home');
+  const [active, setActive] = useState('about');
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-100 to-gray-300">
