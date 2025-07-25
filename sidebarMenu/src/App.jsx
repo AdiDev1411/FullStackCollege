@@ -9,11 +9,11 @@ const menuItems = [
 
 const App = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [active, setActive] = useState('Home');
+  const [active, setActive] = useState('about');
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-100 to-gray-300">
-      {/* Hamburger Icon */}
+      
       <button
         className="fixed top-4 left-4 z-30 p-2 rounded-full bg-gray-800 text-white shadow-lg hover:bg-gray-700 transition duration-200"
         onClick={() => setIsOpen(true)}
