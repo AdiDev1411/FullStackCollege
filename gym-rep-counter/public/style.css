@@ -1,0 +1,103 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: linear-gradient(135deg, #232526 0%, #414345 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.counter-container {
+  background: linear-gradient(135deg, #232526 0%, #485563 100%);
+  border-radius: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22),
+    0 1.5px 8px rgba(80, 255, 180, 0.08);
+  padding: 2.7rem 2.2rem 2.2rem 2.2rem;
+  max-width: 370px;
+  width: 92vw;
+  text-align: center;
+  border: 1.5px solid rgba(80, 255, 180, 0.1);
+ 
+}
+
+.counter-container h1 {
+  margin-bottom: 1.5rem;
+  font-size: 2.2rem;
+  color: #e6ffe6;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.22);
+  letter-spacing: 0.07em;
+}
+
+.counter-display {
+  font-size: 4rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  color: #38f9d7;
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.counter-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1.2rem;
+}
+
+.counter-btn {
+  background: linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%);
+  color: #1b3a1b;
+  border: none;
+  border-radius: 50%;
+  width: 3.5rem;
+  height: 3.5rem;
+  font-size: 2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(120, 255, 214, 0.12);
+}
+.counter-btn:active {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  color: #0f1e0f;
+  transform: scale(0.95);
+}
+
+.reset-btn {
+  background: linear-gradient(135deg, #b7ffb2 0%, #b2fefa 100%);
+  color: #1b3a1b;
+  border: none;
+  border-radius: 1rem;
+  padding: 0.7rem 2.2rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  margin-top: 0.5rem;
+}
+.reset-btn:active {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  color: #0f1e0f;
+  transform: scale(0.97);
+}
+
+@media (max-width: 600px) {
+  .counter-container {
+    padding: 1.2rem 0.5rem 1.5rem 0.5rem;
+    max-width: 98vw;
+  }
+  .counter-display {
+    font-size: 2.7rem;
+  }
+  .counter-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.3rem;
+  }
+  .reset-btn {
+    padding: 0.5rem 1.2rem;
+    font-size: 1rem;
+  }
+}
