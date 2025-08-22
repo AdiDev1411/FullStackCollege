@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Chatter — Minimal Social Chat</title>
+  <title>Chatter — Real-Time Chat Application</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -360,7 +360,7 @@
     <div class="group"><button class="btn primary full" id="authSubmit">Sign up</button></div>
     <div class="group"><button class="btn full" id="googleBtn">Continue with Google</button></div>
     <div class="switch" id="authSwitch">Already have an account? <a href="#" id="toLogin">Sign in</a></div>
-    <p class="muted" style="margin-top:8px">Fill your Firebase config in the script to run locally.</p>
+    <p class="muted" style="margin-top:8px">Your Instagram/Chatter clone with real-time messaging.</p>
   </div>
 
   <div id="appView" class="app" hidden>
@@ -376,7 +376,7 @@
 
       <div class="card search">
         <input id="userSearch" placeholder="Search users by name/email" />
-        <button class="btn" id="inviteBtn">+</button>
+        <button class="btn" id="inviteBtn">+ Invite</button>
       </div>
 
       <div class="nav card">
@@ -391,16 +391,19 @@
         <div class="chats" id="recentList"></div>
       </div>
 
-      <div class="muted" style="padding:8px;text-align:center">Built with Firebase</div>
+      <div class="muted" style="padding:8px;text-align:center">
+        <div>🚀 Built with Firebase</div>
+        <div style="font-size:12px; opacity:0.7;">Instagram/Chatter Clone</div>
+      </div>
     </aside>
 
     <main class="main">
       <div class="topbar">
         <div class="title">
           <div class="menu"><button class="btn ghost" id="toggleSidebar">☰</button></div>
-          <div><strong id="chatTitle">Welcome</strong>
-            <div id="chatSub" class="muted" style="font-size:.9rem">Select a conversation or find people to
-              start chatting.</div>
+          <div><strong id="chatTitle">Welcome to Chatter</strong>
+            <div id="chatSub" class="muted" style="font-size:.9rem">Select a conversation or find people to start
+              chatting.</div>
           </div>
         </div>
       </div>
@@ -419,8 +422,7 @@
   </div>
 
   <script type="module">
-    // === 1) Fill YOUR Firebase config here ===
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    // === FIREBASE CONFIGURATION ===
     const firebaseConfig = {
       apiKey: "AIzaSyD_Z-VTsczXOlN_vZSVcRJxDr2vAs-lVTc",
       authDomain: "instagramclone-83277.firebaseapp.com",
@@ -431,7 +433,7 @@
       measurementId: "G-45376P5CXH"
     };
 
-    // === 2) Firebase SDKs (v10 modular) ===
+    // === FIREBASE IMPORTS ===
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile, GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
     import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, getDocs, serverTimestamp, onSnapshot, orderBy, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
@@ -440,7 +442,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // DOM refs
+    // === DOM ELEMENTS ===
     const authView = document.getElementById('authView');
     const appView = document.getElementById('appView');
     const authTitle = document.getElementById('authTitle');
@@ -473,19 +475,21 @@
     const toggleSidebar = document.getElementById('toggleSidebar');
     const sidebar = document.getElementById('sidebar');
 
+    // === GLOBAL VARIABLES ===
     let isSignup = true;
     let activeChatId = null;
-    let messagesUnsub = null; // real-time listener cleanup
-    let currentView = 'chats'; // Track current view
+    let messagesUnsub = null;
+    let currentView = 'chats';
 
     const provider = new GoogleAuthProvider();
 
+    // === AUTHENTICATION FUNCTIONS ===
     function setAuthMode(signup) {
       isSignup = signup;
       authTitle.textContent = signup ? 'Create account' : 'Welcome back';
       authSubmit.textContent = signup ? 'Sign up' : 'Sign in';
       nameInput.parentElement.style.display = signup ? 'flex' : 'none';
-      document.getElementById('authSwitch').innerHTML = signup ? 'Already have an account? <a href="#" id="toLogin">Sign in</a>' : "Don't have an account? <a href='#' id='toSignup'>Create one'</a>";
+      document.getElementById('authSwitch').innerHTML = signup ? 'Already have an account? <a href="#" id="toLogin">Sign in</a>' : "Don't have an account? <a href='#' id='toSignup'>Create one</a>";
       document.getElementById('toLogin')?.addEventListener('click', e => { e.preventDefault(); setAuthMode(false) });
       document.getElementById('toSignup')?.addEventListener('click', e => { e.preventDefault(); setAuthMode(true) });
     }
@@ -496,7 +500,8 @@
       try {
         const cred = await signInWithPopup(auth, provider);
         await ensureUserDoc(cred.user);
-      } catch (e) { alert(e.message) }
+        await processPendingInvitation();
+      } catch (e) { alert('Error: ' + e.message) }
     });
 
     authSubmit.addEventListener('click', async () => {
@@ -506,27 +511,29 @@
         if (isSignup) {
           const name = nameInput.value.trim() || email.split('@')[0];
           const cred = await createUserWithEmailAndPassword(auth, email, pass);
-          await updateProfile(cred.user, { displayName: name, photoURL: `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(name)}` });
+          await updateProfile(cred.user, {
+            displayName: name,
+            photoURL: `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(name)}`
+          });
           await ensureUserDoc(cred.user);
         } else {
           const cred = await signInWithEmailAndPassword(auth, email, pass);
           await ensureUserDoc(cred.user);
         }
-      } catch (e) { alert(e.message) }
+        await processPendingInvitation();
+      } catch (e) { alert('Error: ' + e.message) }
     });
 
     navLogout.addEventListener('click', () => signOut(auth));
     toggleSidebar.addEventListener('click', () => sidebar.classList.toggle('open'));
 
-    // Navigation functionality
+    // === NAVIGATION ===
     navChats.addEventListener('click', () => switchView('chats'));
     navPeople.addEventListener('click', () => switchView('people'));
     navProfile.addEventListener('click', () => switchView('profile'));
 
     function switchView(view) {
       currentView = view;
-
-      // Update active nav item
       document.querySelectorAll('.nav .item').forEach(item => item.classList.remove('active'));
 
       if (view === 'chats') {
@@ -546,7 +553,7 @@
         recentList.style.display = 'flex';
         userSearch.parentElement.style.display = 'flex';
         loadAllUsers();
-        emptyState.innerHTML = '<div class="pill">Search for people above</div>';
+        emptyState.innerHTML = '<div class="pill">Search for people above or invite new users</div>';
         composer.hidden = true;
         emptyState.hidden = false;
       } else if (view === 'profile') {
@@ -561,98 +568,420 @@
       }
     }
 
-    async function loadAllUsers() {
-      const me = auth.currentUser;
-      if (!me) {
-        console.log('No authenticated user');
+    // === REAL USER INVITATION SYSTEM ===
+    inviteBtn.addEventListener('click', () => {
+      if (currentView === 'people') {
+        showInviteModal();
+      } else {
+        generateShareableLink();
+      }
+    });
+
+    function showInviteModal() {
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+        background: rgba(0,0,0,0.8); display: flex; align-items: center; 
+        justify-content: center; z-index: 1000;
+      `;
+
+      modal.innerHTML = `
+        <div style="background: var(--panel); padding: 30px; border-radius: 16px; 
+                    border: 1px solid rgba(255,255,255,0.1); max-width: 500px; width: 90%;">
+          <h2 style="margin: 0 0 20px 0; color: var(--text);">📧 Invite People to Chatter</h2>
+          <p style="color: var(--muted); margin-bottom: 25px;">
+            Choose how you want to invite people to your chat:
+          </p>
+          
+          <div style="display: flex; flex-direction: column; gap: 15px;">
+            <button class="btn primary" onclick="sendEmailInvitation(); closeModal();" 
+                    style="padding: 15px; text-align: left; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 20px;">✉️</span>
+              <div>
+                <div style="font-weight: 600;">Send Email Invitation</div>
+                <small style="opacity: 0.8;">Send a personalized email to someone's inbox</small>
+              </div>
+            </button>
+            
+            <button class="btn primary" onclick="generateShareableLink(); closeModal();" 
+                    style="padding: 15px; text-align: left; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 20px;">🔗</span>
+              <div>
+                <div style="font-weight: 600;">Generate Invitation Link</div>
+                <small style="opacity: 0.8;">Create a link to share anywhere</small>
+              </div>
+            </button>
+            
+            <button class="btn" onclick="createDemoUsers(); closeModal();" 
+                    style="padding: 15px; text-align: left; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 20px;">👥</span>
+              <div>
+                <div style="font-weight: 600;">Create Demo Users</div>
+                <small style="opacity: 0.8;">Add fake users for testing</small>
+              </div>
+            </button>
+          </div>
+          
+          <button onclick="closeModal()" class="btn ghost" 
+                  style="width: 100%; margin-top: 20px;">Cancel</button>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      window.closeModal = () => {
+        document.body.removeChild(modal);
+        delete window.closeModal;
+      };
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+    }
+
+    // === EMAIL INVITATION SYSTEM ===
+    window.sendEmailInvitation = async function () {
+      const email = prompt('Enter the email address of the person you want to invite:');
+      if (!email || !email.includes('@')) {
+        alert('Please enter a valid email address');
         return;
       }
 
       try {
-        console.log('Loading all users...');
+        const me = auth.currentUser;
+        if (!me) {
+          alert('Please log in first');
+          return;
+        }
+
+        const invitationCode = Math.random().toString(36).substring(2, 15);
+        const invitationId = `inv_${Date.now()}`;
+
+        await setDoc(doc(db, 'invitations', invitationId), {
+          invitationId,
+          invitationCode,
+          inviterUid: me.uid,
+          inviterName: me.displayName || me.email,
+          inviterEmail: me.email,
+          inviteeEmail: email,
+          status: 'pending',
+          createdAt: serverTimestamp(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        });
+
+        const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${invitationCode}`;
+
+        const subject = `${me.displayName || me.email} invited you to join Chatter`;
+        const body = `Hi!
+
+${me.displayName || me.email} has invited you to join Chatter, a real-time chat platform.
+
+🔗 Click here to join: ${inviteLink}
+
+Or use invitation code: ${invitationCode}
+
+This invitation expires in 7 days.
+
+Best regards,
+Chatter Team`;
+
+        window.open(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+
+        alert(`✅ Email invitation prepared for ${email}!
+
+Invitation Link: ${inviteLink}
+Code: ${invitationCode}
+
+Your email client should open automatically. If not, copy the link above and send it manually.`);
+
+      } catch (error) {
+        console.error('Error sending invitation:', error);
+        alert('Error sending invitation: ' + error.message);
+      }
+    };
+
+    window.generateShareableLink = async function () {
+      try {
+        const me = auth.currentUser;
+        if (!me) {
+          alert('Please log in first');
+          return;
+        }
+
+        const invitationCode = Math.random().toString(36).substring(2, 15);
+        const invitationId = `inv_${Date.now()}`;
+
+        await setDoc(doc(db, 'invitations', invitationId), {
+          invitationId,
+          invitationCode,
+          inviterUid: me.uid,
+          inviterName: me.displayName || me.email,
+          inviterEmail: me.email,
+          inviteeEmail: '',
+          status: 'pending',
+          createdAt: serverTimestamp(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          isGeneral: true
+        });
+
+        const inviteLink = `${window.location.origin}${window.location.pathname}?invite=${invitationCode}`;
+
+        if (navigator.clipboard) {
+          try {
+            await navigator.clipboard.writeText(inviteLink);
+            alert(`✅ Invitation link copied to clipboard!
+
+${inviteLink}
+
+Share this link with people you want to invite. The link expires in 7 days.`);
+          } catch (err) {
+            alert(`✅ Invitation link generated!
+
+${inviteLink}
+
+Copy this link and share it with people you want to invite. The link expires in 7 days.`);
+          }
+        } else {
+          alert(`✅ Invitation link generated!
+
+${inviteLink}
+
+Copy this link and share it with people you want to invite. The link expires in 7 days.`);
+        }
+
+      } catch (error) {
+        console.error('Error generating invitation:', error);
+        alert('Error generating invitation: ' + error.message);
+      }
+    };
+
+    // === INVITATION PROCESSING ===
+    function checkForInvitationCode() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const inviteCode = urlParams.get('invite');
+      if (inviteCode) {
+        sessionStorage.setItem('pendingInvitationCode', inviteCode);
+        alert('🎉 You received an invitation to join Chatter!\n\nPlease create an account or sign in to accept the invitation.');
+      }
+    }
+
+    async function processPendingInvitation() {
+      const pendingCode = sessionStorage.getItem('pendingInvitationCode');
+      if (!pendingCode) return;
+
+      try {
+        const me = auth.currentUser;
+        if (!me) return;
+
+        const invitationsRef = collection(db, 'invitations');
+        const q = query(invitationsRef, where('invitationCode', '==', pendingCode));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          const invitationDoc = querySnapshot.docs[0];
+          const invitation = invitationDoc.data();
+
+          await updateDoc(invitationDoc.ref, {
+            status: 'accepted',
+            acceptedBy: me.uid,
+            acceptedAt: serverTimestamp()
+          });
+
+          sessionStorage.removeItem('pendingInvitationCode');
+
+          alert(`🎉 Welcome to Chatter! You've joined via ${invitation.inviterName}'s invitation.`);
+        }
+      } catch (error) {
+        console.error('Error processing invitation:', error);
+      }
+    }
+
+    // === DEMO USERS ===
+    window.createDemoUsers = async function () {
+      const me = auth.currentUser;
+      if (!me) {
+        alert('Please log in first');
+        return;
+      }
+
+      const testUsers = [
+        { name: 'Alice Johnson', email: 'alice@example.com' },
+        { name: 'Bob Smith', email: 'bob@example.com' },
+        { name: 'Carol Davis', email: 'carol@example.com' },
+        { name: 'David Wilson', email: 'david@example.com' },
+        { name: 'Emma Garcia', email: 'emma@example.com' }
+      ];
+
+      try {
+        let created = 0;
+        for (const testUser of testUsers) {
+          const fakeUid = `test_${testUser.email.split('@')[0]}`;
+
+          const existingUser = await getDoc(doc(db, 'users', fakeUid));
+          if (!existingUser.exists()) {
+            await setDoc(doc(db, 'users', fakeUid), {
+              uid: fakeUid,
+              name: testUser.name,
+              email: testUser.email,
+              photoURL: `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(testUser.name)}`,
+              createdAt: serverTimestamp(),
+              isTestUser: true
+            });
+            created++;
+          }
+        }
+
+        alert(`✅ ${created} demo users created! You can see them in the People section.`);
+
+        if (currentView === 'people') {
+          setTimeout(() => loadAllUsers(), 1000);
+        }
+      } catch (error) {
+        console.error('Error creating demo users:', error);
+        alert('Error creating demo users: ' + error.message);
+      }
+    };
+
+    // === USER MANAGEMENT ===
+    async function loadAllUsers() {
+      const me = auth.currentUser;
+      if (!me) return;
+
+      try {
         const usersRef = collection(db, 'users');
         const qs = await getDocs(usersRef);
-
-        console.log('Total users found:', qs.size);
         const allUsers = qs.docs.map(d => d.data());
-        console.log('All users:', allUsers);
-
         const users = allUsers.filter(u => u.uid !== me.uid);
-        console.log('Other users (excluding me):', users);
 
         if (users.length === 0) {
           recentList.innerHTML = `
-                        <div style="padding: 20px; text-align: center; color: #aeb7e9;">
-                            <h3>No other users found</h3>
-                            <p>To test the chat functionality:</p>
-                            <ol style="text-align: left; margin: 10px 0;">
-                                <li>Open an incognito/private browser window</li>
-                                <li>Go to this same URL</li>
-                                <li>Create a new account with different email</li>
-                                <li>Both users will then see each other here</li>
-                            </ol>
-                            <button class="btn primary" onclick="createTestUsers()" style="margin-top: 10px;">Add Test Users</button>
-                        </div>
-                    `;
+            <div style="padding: 20px; text-align: center; color: #aeb7e9;">
+              <h3>No other users found</h3>
+              <p>To add real users:</p>
+              <ol style="text-align: left; margin: 10px 0;">
+                <li>Click the "Invite" button above</li>
+                <li>Send email invitations to friends</li>
+                <li>Or generate a link to share</li>
+              </ol>
+              <button class="btn primary" onclick="createDemoUsers()" style="margin-top: 10px;">Add Demo Users</button>
+            </div>
+          `;
         } else {
           renderPeople(users);
         }
       } catch (error) {
         console.error('Error loading users:', error);
         recentList.innerHTML = `
-                    <div style="padding: 20px; text-align: center; color: var(--danger);">
-                        Error loading users: ${error.message}
-                    </div>
-                `;
+          <div style="padding: 20px; text-align: center; color: var(--danger);">
+            Error loading users: ${error.message}
+          </div>
+        `;
       }
     }
 
+    function renderPeople(users) {
+      recentList.innerHTML = '';
+      users.forEach(u => {
+        const row = document.createElement('div');
+        row.className = 'chat-row';
+        row.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+        row.innerHTML = `
+          <img src="${u.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(u.name || u.uid)}`}" 
+               style="width: 46px; height: 46px; border-radius: 50%;">
+          <div style="flex: 1;">
+            <div class='name' style="font-weight: 600; color: white;">
+              ${escapeHtml(u.name || 'User')}
+              ${u.isTestUser ? '<span style="color: #6c7cff; font-size: 12px;">(Demo)</span>' : ''}
+            </div>
+            <div class='last' style="color: #aeb7e9; font-size: 14px;">${escapeHtml(u.email || '')}</div>
+          </div>
+          <div>
+            <button class='btn primary' onclick="startChatWithUser('${u.uid}')" 
+                    style="padding: 8px 16px; font-size: 14px;">
+              💬 Chat
+            </button>
+          </div>
+        `;
+        recentList.appendChild(row);
+      });
+    }
+
+    window.startChatWithUser = function (otherUid) {
+      startChatWith(otherUid);
+    };
+
+    // === USER SEARCH ===
+    userSearch.addEventListener('input', debounce(async (e) => {
+      const term = e.target.value.trim().toLowerCase();
+      const me = auth.currentUser;
+      if (!me) return;
+
+      const usersRef = collection(db, 'users');
+      let users = [];
+
+      if (term) {
+        const qs = await getDocs(usersRef);
+        users = qs.docs.map(d => d.data()).filter(u =>
+          u.uid !== me.uid &&
+          ((u.name || '').toLowerCase().includes(term) ||
+            (u.email || '').toLowerCase().includes(term))
+        );
+      } else if (currentView === 'people') {
+        const qs = await getDocs(usersRef);
+        users = qs.docs.map(d => d.data()).filter(u => u.uid !== me.uid).slice(0, 50);
+      } else {
+        renderPeople([]);
+        return;
+      }
+
+      renderPeople(users);
+    }, 300));
+
+    // === PROFILE VIEW ===
     function showProfileView() {
       const user = auth.currentUser;
       if (!user) return;
 
       messagesEl.innerHTML = `
-                <div style="padding: 20px; max-width: 500px;">
-                    <h2 style="margin-bottom: 20px;">Profile Settings</h2>
-                    
-                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
-                        <img src="${user.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(user.uid)}`}" 
-                             style="width: 80px; height: 80px; border-radius: 50%;" alt="Profile">
-                        <div>
-                            <h3 style="margin: 0;">${escapeHtml(user.displayName || 'Anonymous')}</h3>
-                            <p style="margin: 5px 0; color: #aeb7e9;">${escapeHtml(user.email || '')}</p>
-                        </div>
-                    </div>
+        <div style="padding: 20px; max-width: 500px;">
+          <h2 style="margin-bottom: 20px;">Profile Settings</h2>
+          
+          <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
+            <img src="${user.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(user.uid)}`}" 
+                 style="width: 80px; height: 80px; border-radius: 50%;" alt="Profile">
+            <div>
+              <h3 style="margin: 0;">${escapeHtml(user.displayName || 'Anonymous')}</h3>
+              <p style="margin: 5px 0; color: #aeb7e9;">${escapeHtml(user.email || '')}</p>
+            </div>
+          </div>
 
-                    <div style="display: flex; flex-direction: column; gap: 15px;">
-                        <div>
-                            <label style="display: block; margin-bottom: 5px; color: #aeb7e9;">Display Name</label>
-                            <input type="text" id="profileName" value="${escapeHtml(user.displayName || '')}" 
-                                   style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white;">
-                        </div>
-                        
-                        <div>
-                            <label style="display: block; margin-bottom: 5px; color: #aeb7e9;">Email</label>
-                            <input type="email" value="${escapeHtml(user.email || '')}" disabled
-                                   style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: #aeb7e9;">
-                        </div>
+          <div style="display: flex; flex-direction: column; gap: 15px;">
+            <div>
+              <label style="display: block; margin-bottom: 5px; color: #aeb7e9;">Display Name</label>
+              <input type="text" id="profileName" value="${escapeHtml(user.displayName || '')}" 
+                     style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white;">
+            </div>
+            
+            <div>
+              <label style="display: block; margin-bottom: 5px; color: #aeb7e9;">Email</label>
+              <input type="email" value="${escapeHtml(user.email || '')}" disabled
+                     style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: #aeb7e9;">
+            </div>
 
-                        <div style="display: flex; gap: 10px; margin-top: 20px;">
-                            <button class="btn primary" onclick="updateProfile()" style="flex: 1;">Update Profile</button>
-                            <button class="btn" onclick="changePassword()" style="flex: 1;">Change Password</button>
-                        </div>
-                    </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+              <button class="btn primary" onclick="updateUserProfile()" style="flex: 1;">Update Profile</button>
+            </div>
+          </div>
 
-                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                        <h3>Account Actions</h3>
-                        <button class="btn" onclick="signOut(auth)" style="background: var(--danger); margin-top: 10px;">Sign Out</button>
-                    </div>
-                </div>
-            `;
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <h3>Account Actions</h3>
+            <button class="btn" onclick="signOut(auth)" style="background: var(--danger); margin-top: 10px;">Sign Out</button>
+          </div>
+        </div>
+      `;
     }
 
-    // Profile functions
-    window.updateProfile = async function () {
+    window.updateUserProfile = async function () {
       const user = auth.currentUser;
       if (!user) return;
 
@@ -668,7 +997,6 @@
           photoURL: user.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(newName)}`
         });
 
-        // Update user document in Firestore
         await updateDoc(doc(db, 'users', user.uid), {
           name: newName,
           photoURL: user.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(newName)}`
@@ -676,176 +1004,19 @@
 
         alert('Profile updated successfully!');
         meName.textContent = newName;
-        showProfileView(); // Refresh the view
+        showProfileView();
       } catch (error) {
         alert('Error updating profile: ' + error.message);
       }
     };
 
-    window.changePassword = function () {
-      const newPassword = prompt('Enter new password (minimum 6 characters):');
-      if (!newPassword || newPassword.length < 6) {
-        alert('Password must be at least 6 characters long');
-        return;
-      }
-
-      // Note: Changing password requires recent authentication
-      alert('For security reasons, please sign out and sign in again, then try changing your password.');
-    };
-
-    // Function to create test users for demonstration
-    window.createTestUsers = async function () {
-      const me = auth.currentUser;
-      if (!me) return;
-
-      const testUsers = [
-        { name: 'Alice Johnson', email: 'alice@example.com' },
-        { name: 'Bob Smith', email: 'bob@example.com' },
-        { name: 'Carol Davis', email: 'carol@example.com' },
-        { name: 'David Wilson', email: 'david@example.com' }
-      ];
-
-      try {
-        console.log('Creating test user documents...');
-        for (const testUser of testUsers) {
-          const fakeUid = `test_${testUser.email.split('@')[0]}`;
-          await setDoc(doc(db, 'users', fakeUid), {
-            uid: fakeUid,
-            name: testUser.name,
-            email: testUser.email,
-            photoURL: `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(testUser.name)}`,
-            createdAt: serverTimestamp(),
-            isTestUser: true
-          });
-        }
-        alert('Test users created! Refresh the People section to see them.');
-        loadAllUsers(); // Refresh the list
-      } catch (error) {
-        console.error('Error creating test users:', error);
-        alert('Error creating test users: ' + error.message);
-      }
-    };
-
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        authView.hidden = true; appView.hidden = false;
-        meName.textContent = user.displayName || 'Anonymous';
-        meEmail.textContent = user.email || '';
-        meAvatar.src = user.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(user.uid)}`;
-
-        // Initialize with chats view
-        switchView('chats');
-      } else {
-        appView.hidden = true; authView.hidden = false; setAuthMode(false);
-      }
-    });
-
-    async function ensureUserDoc(user) {
-      const ref = doc(db, 'users', user.uid);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        await setDoc(ref, {
-          uid: user.uid,
-          name: user.displayName || user.email?.split('@')[0] || 'Anonymous',
-          email: user.email,
-          photoURL: user.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(user.uid)}`,
-          createdAt: serverTimestamp()
-        });
-        console.log('User document created for:', user.email);
-      } else {
-        // Update existing user document with latest info
-        await setDoc(ref, {
-          uid: user.uid,
-          name: user.displayName || user.email?.split('@')[0] || 'Anonymous',
-          email: user.email,
-          photoURL: user.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(user.uid)}`,
-        }, { merge: true });
-        console.log('User document updated for:', user.email);
-      }
-    }
-
-    // Search & people listing
-    userSearch.addEventListener('input', debounce(async (e) => {
-      const term = e.target.value.trim().toLowerCase();
-      const me = auth.currentUser;
-      if (!me) return;
-
-      const usersRef = collection(db, 'users');
-      let users = [];
-
-      if (term) {
-        // Simple client filter because Firestore doesn't do contains for strings without indexes; keep demo-friendly
-        const qs = await getDocs(usersRef);
-        users = qs.docs.map(d => d.data()).filter(u =>
-          u.uid !== me.uid &&
-          ((u.name || '').toLowerCase().includes(term) ||
-            (u.email || '').toLowerCase().includes(term))
-        );
-      } else if (currentView === 'people') {
-        // Load all users when in people view and search is empty
-        const qs = await getDocs(usersRef);
-        users = qs.docs.map(d => d.data()).filter(u => u.uid !== me.uid).slice(0, 50);
-      } else {
-        // Clear results if not in people view
-        renderPeople([]);
-        return;
-      }
-
-      renderPeople(users);
-    }, 300));
-
-    function renderPeople(users) {
-      recentList.innerHTML = ''; // Clear existing content
-
-      if (users.length === 0) {
-        recentList.innerHTML = `
-                    <div style="padding: 20px; text-align: center; color: #aeb7e9;">
-                        <p>No users found</p>
-                        <small>Search above or create test users to get started</small>
-                    </div>
-                `;
-        return;
-      }
-
-      console.log('Rendering people:', users);
-      users.forEach(u => {
-        const row = document.createElement('div');
-        row.className = 'chat-row';
-        row.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
-        row.innerHTML = `
-                    <img src="${u.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(u.name || u.uid)}`}" 
-                         style="width: 46px; height: 46px; border-radius: 50%;">
-                    <div style="flex: 1;">
-                        <div class='name' style="font-weight: 600; color: white;">
-                            ${escapeHtml(u.name || 'User')}
-                            ${u.isTestUser ? '<span style="color: #6c7cff; font-size: 12px;">(Test User)</span>' : ''}
-                        </div>
-                        <div class='last' style="color: #aeb7e9; font-size: 14px;">${escapeHtml(u.email || '')}</div>
-                    </div>
-                    <div>
-                        <button class='btn primary' onclick="startChatWithUser('${u.uid}')" 
-                                style="padding: 8px 16px; font-size: 14px;">
-                            💬 Chat
-                        </button>
-                    </div>
-                `;
-        recentList.appendChild(row);
-      });
-    }
-
-    // Global function to start chat (accessible from onclick)
-    window.startChatWithUser = function (otherUid) {
-      console.log('Starting chat with user:', otherUid);
-      startChatWith(otherUid);
-    };
-
-    // Recent chats (userChats subcollection per user for quick listing)
+    // === CHAT FUNCTIONALITY ===
     function loadRecentChats(uid) {
       if (!uid) return;
       const ucRef = collection(db, 'userChats', uid, 'items');
       const qy = query(ucRef, orderBy('updatedAt', 'desc'));
       onSnapshot(qy, (qs) => {
-        if (currentView !== 'chats') return; // Only update if in chats view
+        if (currentView !== 'chats') return;
 
         recentList.innerHTML = '';
         if (qs.empty) {
@@ -859,9 +1030,9 @@
           row.className = 'chat-row';
           row.dataset.chatId = c.chatId;
           row.innerHTML = `
-          <img src="${c.otherPhoto || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(c.otherUid)}`}" alt="pfp">
-          <div><div class="name">${escapeHtml(c.otherName || 'User')}</div><div class="last">${escapeHtml(c.lastMessage || 'Say hi 👋')}</div></div>
-          <div class="muted">${timeAgo(c.updatedAt?.toDate?.() || new Date())}</div>`;
+            <img src="${c.otherPhoto || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(c.otherUid)}`}" alt="pfp">
+            <div><div class="name">${escapeHtml(c.otherName || 'User')}</div><div class="last">${escapeHtml(c.lastMessage || 'Say hi 👋')}</div></div>
+            <div class="muted">${timeAgo(c.updatedAt?.toDate?.() || new Date())}</div>`;
           row.addEventListener('click', () => openChat(c.chatId, { uid: c.otherUid, name: c.otherName, photo: c.otherPhoto }));
           recentList.appendChild(row);
         });
@@ -879,11 +1050,15 @@
         const chatRef = doc(db, 'chats', chatId);
         const chatSnap = await getDoc(chatRef);
         if (!chatSnap.exists()) {
-          // Create chat doc
-          await setDoc(chatRef, { chatId, participants: [me.uid, otherUid], createdAt: serverTimestamp(), updatedAt: serverTimestamp(), lastMessage: '' });
+          await setDoc(chatRef, {
+            chatId,
+            participants: [me.uid, otherUid],
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            lastMessage: ''
+          });
         }
 
-        // Mirror in each user's userChats for fast recent list
         const other = await getDoc(doc(db, 'users', otherUid));
         const meUser = await getDoc(doc(db, 'users', me.uid));
 
@@ -893,13 +1068,22 @@
         }
 
         await setDoc(doc(db, 'userChats', me.uid, 'items', chatId), {
-          chatId, otherUid, otherName: other.data()?.name || 'User', otherPhoto: other.data()?.photoURL || '', lastMessage: '', updatedAt: serverTimestamp()
-        }, { merge: true });
-        await setDoc(doc(db, 'userChats', otherUid, 'items', chatId), {
-          chatId, otherUid: me.uid, otherName: meUser.data()?.name || 'User', otherPhoto: meUser.data()?.photoURL || '', lastMessage: '', updatedAt: serverTimestamp()
+          chatId, otherUid,
+          otherName: other.data()?.name || 'User',
+          otherPhoto: other.data()?.photoURL || '',
+          lastMessage: '',
+          updatedAt: serverTimestamp()
         }, { merge: true });
 
-        // Switch to chats view and open the conversation
+        await setDoc(doc(db, 'userChats', otherUid, 'items', chatId), {
+          chatId,
+          otherUid: me.uid,
+          otherName: meUser.data()?.name || 'User',
+          otherPhoto: meUser.data()?.photoURL || '',
+          lastMessage: '',
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
         switchView('chats');
         setTimeout(() => {
           openChat(chatId, { uid: otherUid, name: other.data()?.name, photo: other.data()?.photoURL });
@@ -913,7 +1097,7 @@
     function openChat(chatId, other) {
       activeChatId = chatId;
       chatTitle.textContent = other?.name || 'Chat';
-      chatSub.textContent = other?.email || 'Click to view profile';
+      chatSub.textContent = other?.email || 'Active conversation';
       emptyState.hidden = true;
       composer.hidden = false;
       messagesEl.innerHTML = '';
@@ -934,7 +1118,6 @@
             div.className = `bubble ${isMe ? 'me' : 'you'}`;
             div.textContent = m.text;
 
-            // Add timestamp on hover
             if (m.createdAt) {
               div.title = m.createdAt.toDate().toLocaleString();
             }
@@ -957,31 +1140,89 @@
     async function sendMessage() {
       const text = messageInput.value.trim();
       if (!text || !activeChatId) return;
-      const me = auth.currentUser; if (!me) return;
+      const me = auth.currentUser;
+      if (!me) return;
+
       messageInput.value = '';
       const msgsRef = collection(db, 'chats', activeChatId, 'messages');
       await addDoc(msgsRef, { text, senderId: me.uid, createdAt: serverTimestamp() });
-      // update last message mirrors
+
       const chatRef = doc(db, 'chats', activeChatId);
       await updateDoc(chatRef, { lastMessage: text, updatedAt: serverTimestamp() });
 
-      // Determine other userId from chatId
       const [a, b] = activeChatId.split('_');
       const otherUid = me.uid === a ? b : a;
       await updateDoc(doc(db, 'userChats', me.uid, 'items', activeChatId), { lastMessage: text, updatedAt: serverTimestamp() });
       await updateDoc(doc(db, 'userChats', otherUid, 'items', activeChatId), { lastMessage: text, updatedAt: serverTimestamp() });
     }
 
-    // Helpers
-    function debounce(fn, ms) { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms) } }
-    function escapeHtml(s) { return s?.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c])) }
-    function timeAgo(date) { const d = (typeof date === 'number') ? new Date(date) : date; const diff = Math.floor((Date.now() - d.getTime()) / 1000); if (diff < 60) return diff + "s"; if (diff < 3600) return Math.floor(diff / 60) + "m"; if (diff < 86400) return Math.floor(diff / 3600) + "h"; return Math.floor(diff / 86400) + "d" }
-
-    // Invite button simply opens mailto with this page URL (when hosted)
-    inviteBtn.addEventListener('click', () => {
-      const url = location.href;
-      location.href = `mailto:?subject=Join me on Chatter&body=Let’s chat here: ${url}`;
+    // === AUTH STATE HANDLER ===
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        authView.hidden = true;
+        appView.hidden = false;
+        meName.textContent = user.displayName || 'Anonymous';
+        meEmail.textContent = user.email || '';
+        meAvatar.src = user.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(user.uid)}`;
+        switchView('chats');
+      } else {
+        appView.hidden = true;
+        authView.hidden = false;
+        setAuthMode(false);
+      }
     });
+
+    async function ensureUserDoc(user) {
+      const ref = doc(db, 'users', user.uid);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, {
+          uid: user.uid,
+          name: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+          email: user.email,
+          photoURL: user.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(user.uid)}`,
+          createdAt: serverTimestamp()
+        });
+      } else {
+        await setDoc(ref, {
+          uid: user.uid,
+          name: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+          email: user.email,
+          photoURL: user.photoURL || `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(user.uid)}`,
+        }, { merge: true });
+      }
+    }
+
+    // === HELPER FUNCTIONS ===
+    function debounce(fn, ms) {
+      let t;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), ms)
+      }
+    }
+
+    function escapeHtml(s) {
+      return s?.replace(/[&<>"']/g, c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[c]))
+    }
+
+    function timeAgo(date) {
+      const d = (typeof date === 'number') ? new Date(date) : date;
+      const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+      if (diff < 60) return diff + "s";
+      if (diff < 3600) return Math.floor(diff / 60) + "m";
+      if (diff < 86400) return Math.floor(diff / 3600) + "h";
+      return Math.floor(diff / 86400) + "d"
+    }
+
+    // === INITIALIZATION ===
+    checkForInvitationCode();
   </script>
 </body>
 
