@@ -12,8 +12,8 @@
     <div class="container">
         <h1>Kid Calculator <span aria-label="abacus" role="img"></span>🧮</span></h1>
         <p style="color:#ffb347; font-size:1.1em; margin-bottom:18px;">Let's have fun with numbers!</p>
-        <form action="/calculate" method="POST" autocomplete="off" style="margin-bottom: 18px;">
-            <div style="display:flex; justify-content:center; align-items:center; gap:10px; flex-wrap:wrap;">
+        <form action="/calculate" method="POST" autocomplete="off" class="calculator-form">
+            <div class="calculator-inputs">
                 <input type="text" name="num1" placeholder="First number" required aria-label="First number">
                 <select name="operation" id="operation" aria-label="Operation">
                     <option value="add">+</option>
